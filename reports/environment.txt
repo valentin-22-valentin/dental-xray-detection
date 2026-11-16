@@ -1,0 +1,9 @@
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+ultralytics==8.4.175
+numpy==1.26.4
+opencv-python==4.11.0.86
+Pillow==11.1.0
+pycocotools==2.0.11
+matplotlib==3.5.3
+reportlab==5.0.1

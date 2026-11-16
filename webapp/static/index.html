@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dental X-ray Detection</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <h1>Dental X-ray Detection</h1>
+      <span class="subtitle">DENTEX panoramic radiographs · YOLOv8s vs. Faster R-CNN</span>
+    </div>
+    <nav class="nav">
+      <a href="#" class="active" data-view="analyze">Analyze</a>
+      <a href="#" data-view="results">Results</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-analyze" class="view active">
+      <aside class="sidebar">
+        <div class="section">
+          <h2>Image</h2>
+          <div class="radios">
+            <label><input type="radio" name="source" value="sample" checked> Test set</label>
+            <label><input type="radio" name="source" value="upload"> Upload</label>
+          </div>
+
+          <div id="source-sample">
+            <div class="row">
+              <span class="muted" id="sample-count"></span>
+              <button class="text-btn" id="random-btn" type="button">Random</button>
+            </div>
+            <div class="thumbs" id="thumbs"></div>
+          </div>
+
+          <div id="source-upload" hidden>
+            <label class="dropzone" id="dropzone">
+              <input type="file" id="file-input" accept="image/*">
+              <span>Drop a panoramic X-ray here or <u>browse</u></span>
+              <span class="file-name" id="file-name"></span>
+            </label>
+            <p class="muted note">Uploaded images have no ground truth, so TP / FP / FN are not shown.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Models</h2>
+          <div id="models"></div>
+        </div>
+
+        <div class="section">
+          <h2>Display</h2>
+          <label class="field">
+            <span class="row"><span>Confidence threshold</span><output id="thr-out">0.25</output></span>
+            <input type="range" id="threshold" min="0.05" max="0.95" step="0.05" value="0.25">
+          </label>
+          <label class="check"><input type="checkbox" id="show-gt" checked> Show ground truth</label>
+          <label class="check"><input type="checkbox" id="show-labels" checked> Show labels</label>
+        </div>
+
+        <button class="run" id="run-btn" type="button">Run detection</button>
+
+        <div class="section legend" id="legend"></div>
+      </aside>
+
+      <div class="content">
+        <div class="content-head">
+          <h2 id="stage-title">No image selected</h2>
+          <span class="muted" id="stage-sub"></span>
+        </div>
+        <div class="error" id="error" hidden></div>
+        <div class="cards" id="cards"></div>
+        <div class="preview" id="preview"></div>
+      </div>
+    </section>
+
+    <section id="view-results" class="view">
+      <div class="results">
+        <h2>Test set results</h2>
+        <p class="muted" id="results-meta"></p>
+        <div class="table-wrap"><table id="metrics-table"></table></div>
+        <p class="muted note" id="results-note"></p>
+
+        <h2>mAP50–95 per class</h2>
+        <div class="table-wrap"><table id="class-table" class="class-table"></table></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Research prototype, not a medical device. Data: <a href="https://github.com/ibrahimethemhamamci/DENTEX" target="_blank" rel="noopener">DENTEX</a> (CC BY-NC-SA 4.0).
+  </footer>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <div class="lightbox-bar"><span id="lightbox-title"></span><button id="lightbox-close" type="button">Close</button></div>
+    <div class="lightbox-body" id="lightbox-body"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "dataset_root": "training_data/quadrant-enumeration-disease",
+  "annotations": "train_quadrant_enumeration_disease.json",
+  "prepared_dir": "data/prepared",
+  "image_size": 1024,
+  "seed": 42,
+  "val_fraction": 0.15,
+  "test_fraction": 0.15,
+  "device": "auto",
+  "epochs": 50,
+  "workers": 0,
+  "yolo": {"model": "yolov8s.pt", "batch_size": 4, "lr": 0.001},
+  "faster_rcnn": {"batch_size": 2, "lr": 0.005, "pretrained": true},
+  "evaluation": {"score_floor": 0.001, "display_threshold": 0.25, "max_detections": 100},
+  "models": [
+    {"id": "yolov8s", "name": "YOLOv8s", "method": "yolo", "weights": "runs/yolo/weights/best.pt"},
+    {"id": "faster_rcnn", "name": "Faster R-CNN", "method": "faster_rcnn", "weights": "runs/faster_rcnn/best.pth"}
+  ]
+}

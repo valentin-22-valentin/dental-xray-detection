@@ -1,0 +1,122 @@
+{
+  "manifest_sha256": "5ab8998050e1e87b00605301193ca4d119a7d9d46187e4727a89aba7bacecd03",
+  "image_counts": {
+    "train": 493,
+    "val": 106,
+    "test": 106
+  },
+  "annotation_counts": {
+    "train": 2451,
+    "val": 514,
+    "test": 564
+  },
+  "duplicate_annotations": {
+    "train": 0,
+    "val": 1,
+    "test": 0
+  },
+  "disjoint_splits": true,
+  "saved_metric_counts_verified": true,
+  "weights_hashes_verified": true,
+  "environment_at_report_generation": {
+    "torch": "2.5.1+cu121",
+    "torchvision": "0.20.1+cu121",
+    "ultralytics": "8.4.175",
+    "numpy": "1.26.4",
+    "opencv-python": "4.11.0.86",
+    "Pillow": "11.1.0",
+    "pycocotools": "2.0.11",
+    "matplotlib": "3.5.3",
+    "reportlab": "5.0.1"
+  },
+  "per_class_errors": [
+    {
+      "method": "yolo",
+      "class": "Impacted",
+      "annotations": 101,
+      "precision": 0.7904761904761904,
+      "recall": 0.8217821782178217,
+      "f1": 0.8058252427184466,
+      "tp": 83,
+      "fp": 22,
+      "fn": 18
+    },
+    {
+      "method": "yolo",
+      "class": "Caries",
+      "annotations": 346,
+      "precision": 0.28780487804878047,
+      "recall": 0.17052023121387283,
+      "f1": 0.21415607985480942,
+      "tp": 59,
+      "fp": 146,
+      "fn": 287
+    },
+    {
+      "method": "yolo",
+      "class": "Periapical Lesion",
+      "annotations": 16,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 2,
+      "fn": 16
+    },
+    {
+      "method": "yolo",
+      "class": "Deep Caries",
+      "annotations": 101,
+      "precision": 0.3333333333333333,
+      "recall": 0.07920792079207921,
+      "f1": 0.128,
+      "tp": 8,
+      "fp": 16,
+      "fn": 93
+    },
+    {
+      "method": "faster_rcnn",
+      "class": "Impacted",
+      "annotations": 101,
+      "precision": 0.752,
+      "recall": 0.9306930693069307,
+      "f1": 0.831858407079646,
+      "tp": 94,
+      "fp": 31,
+      "fn": 7
+    },
+    {
+      "method": "faster_rcnn",
+      "class": "Caries",
+      "annotations": 346,
+      "precision": 0.3799126637554585,
+      "recall": 0.5028901734104047,
+      "f1": 0.43283582089552236,
+      "tp": 174,
+      "fp": 284,
+      "fn": 172
+    },
+    {
+      "method": "faster_rcnn",
+      "class": "Periapical Lesion",
+      "annotations": 16,
+      "precision": 0.23529411764705882,
+      "recall": 0.25,
+      "f1": 0.24242424242424243,
+      "tp": 4,
+      "fp": 13,
+      "fn": 12
+    },
+    {
+      "method": "faster_rcnn",
+      "class": "Deep Caries",
+      "annotations": 101,
+      "precision": 0.6323529411764706,
+      "recall": 0.42574257425742573,
+      "f1": 0.5088757396449705,
+      "tp": 43,
+      "fp": 25,
+      "fn": 58
+    }
+  ]
+}

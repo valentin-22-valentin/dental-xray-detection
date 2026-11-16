@@ -1,0 +1,12 @@
+{
+  "yolo": {
+    "epoch_of_highest_logged_val_map": 8,
+    "highest_logged_val_map": 0.21582,
+    "epochs_completed": 50
+  },
+  "faster_rcnn": {
+    "epoch_of_highest_logged_val_map": 21,
+    "highest_logged_val_map": 0.30315404263249157,
+    "epochs_completed": 50
+  }
+}

@@ -1,0 +1,9 @@
+# Install matching torch + torchvision first (see README.md).
+torch>=2.5,<3
+torchvision>=0.20,<1
+ultralytics==8.4.175
+Pillow>=10,<13
+numpy>=1.26,<2
+opencv-python>=4.6,<4.12
+pycocotools>=2.0.8,<3
+flask>=3,<4

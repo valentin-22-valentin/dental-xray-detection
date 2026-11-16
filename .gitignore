@@ -1,0 +1,34 @@
+# Python / környezet
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.log
+tmp/
+config.local.json
+
+# Adatok (a DENTEX külön töltendő le, lásd README)
+data/
+training_data/
+
+# Modellsúlyok és tanítási futások (túl nagyok a GitHubhoz)
+runs/
+weights/
+*.pt
+*.pth
+*.zip
+
+# Generált kimenetek, prezentáció és vizsgaanyag
+output/
+.exam-build/
+.presentation-build/
+kerdesek_intrebari/
+eredmeny/
+*.pptx
+*.docx
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
