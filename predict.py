@@ -23,8 +23,8 @@ if __name__ == "__main__":
     visible = [p for p in predictions if p["score"] >= a.threshold]
     draw_prediction(a.image, visible, model.categories, a.output, a.threshold)
     write_json(Path(a.output).with_suffix(".json"), {"image": str(Path(a.image).resolve()), "method": a.method, "threshold": a.threshold, "categories": model.categories, "detections": visible})
-    print(f"Elmentve: {a.output}; {len(visible)} jelölés.")
+    print(f"Saved: {a.output}; {len(visible)} detections.")
     for p in visible:
         print(f"{model.categories[p['category_id']]['name']}: {p['score']:.3f}, bbox={p['bbox']}")
     if not visible:
-        print("Nincs a küszöb feletti találat; ebből nem következik, hogy a kép egészséges.")
+        print("No detections above the threshold. This does not mean the teeth are healthy.")

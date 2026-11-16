@@ -32,10 +32,10 @@ def train(cfg):
     root = Path(cfg["prepared_dir"])
     manifest = read_json(root / "manifest.json")
     if manifest["image_size"] != cfg["image_size"]:
-        raise ValueError("Az image_size eltér az előkészített adatokétól.")
+        raise ValueError("image_size differs from the prepared data.")
     run = ROOT / "runs" / "faster_rcnn"
     if run.exists():
-        raise FileExistsError(f"A futás már létezik: {run}. Archiváld/ nevezd át új tanítás előtt.")
+        raise FileExistsError(f"Run already exists: {run}. Rename or archive it before training again.")
     run.mkdir(parents=True)
     ev, fc = cfg["evaluation"], cfg["faster_rcnn"]
     model = build_model(len(manifest["categories"]), cfg["image_size"], fc["pretrained"], ev["score_floor"], ev["max_detections"]).to(device)
@@ -56,7 +56,7 @@ def train(cfg):
                 targets = [{k:v.to(device) for k,v in t.items()} for t in targets]
                 loss = sum(model(images, targets).values())
                 if not math.isfinite(loss.item()):
-                    raise RuntimeError("Nem véges loss; ellenőrizd az adatokat és csökkentsd az lr értékét.")
+                    raise RuntimeError("Loss is not finite; check the data and lower the learning rate.")
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 10.0)
@@ -65,7 +65,7 @@ def train(cfg):
             metrics = compute_metrics(root / "val.json", predict_loader(model,val_loader,device), ev["display_threshold"], ev["max_detections"])
             score = metrics["map50_95"]
             if score is None:
-                raise ValueError("Nincs értékelhető validációs annotáció.")
+                raise ValueError("No validation annotations to evaluate.")
             writer.writerow({"epoch": epoch, "train_loss": total/len(train_loader), "val_map50_95": score, "val_map50": metrics["map50"], "lr": optimizer.param_groups[0]["lr"], "elapsed_seconds": time.perf_counter()-start})
             f.flush()
             scheduler.step()

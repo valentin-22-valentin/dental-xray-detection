@@ -1,148 +1,151 @@
-# Fogászati röntgenképek elemzése: YOLOv8s vs. Faster R-CNN
+# Dental X-ray Anomaly Detection: YOLOv8s vs. Faster R-CNN
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.5-EE4C2C?logo=pytorch&logoColor=white)
 ![Ultralytics](https://img.shields.io/badge/Ultralytics-YOLOv8-111F68)
 ![License](https://img.shields.io/badge/License-AGPL--3.0-blue)
-![Dataset](https://img.shields.io/badge/Adatok-DENTEX%20(CC%20BY--NC--SA%204.0)-555555)
+![Dataset](https://img.shields.io/badge/Data-DENTEX%20(CC%20BY--NC--SA%204.0)-555555)
 
-Két objektumdetektort hasonlítunk össze, amelyek fogászati **panorámaröntgen-felvételeken** keresik meg és keretezik be a négyféle eltérést: egy egylépéses **YOLOv8s** és egy kétlépéses **Faster R-CNN** modellt. A repó tartalmazza a teljes folyamatot az adat-előkészítéstől a tanításon és a közös kiértékelésen át az egy képen futó predikcióig, valamint egy egyszerű webes felületet, ahol a két modell egymás mellett futtatható.
+This project compares two object detectors that find and label four kinds of dental anomalies on **panoramic X-rays**: the one-stage **YOLOv8s** and the two-stage **Faster R-CNN**. It covers the whole pipeline: data preparation, training, a shared evaluation, prediction on a single image, and a small web interface for running both models side by side.
 
-![Webes felület](docs/screenshots/webapp.png)
+![Web interface: both models analysing the same radiograph](docs/screenshots/webapp.png)
 
 > [!IMPORTANT]
-> Egyetemi projekt, **nem orvostechnikai eszköz**, és nem helyettesíti a fogorvost. A célja az, hogy segítsen a röntgenképek előszűrésében és az esetleges elváltozások megjelölésében.
+> This is a university project, **not a medical device**, and it does not replace a dentist. It is meant to help with pre-screening radiographs and highlighting possible findings.
 
-## Tartalom
+## Contents
 
-- [A feladat](#a-feladat)
-- [Adathalmaz](#adathalmaz)
-- [Modellek](#modellek)
-- [Eredmények](#eredmények)
-- [Webes felület](#webes-felület)
-- [Telepítés és használat](#telepítés-és-használat)
-- [Projektszerkezet](#projektszerkezet)
-- [Korlátok](#korlátok)
-- [Készítők](#készítők)
-- [Hivatkozások és licencek](#hivatkozások-és-licencek)
+- [The task](#the-task)
+- [Dataset](#dataset)
+- [Models](#models)
+- [Results](#results)
+- [Web interface](#web-interface)
+- [Installation and usage](#installation-and-usage)
+- [Project structure](#project-structure)
+- [Limitations](#limitations)
+- [Authors](#authors)
+- [References and licenses](#references-and-licenses)
 
-## A feladat
+## The task
 
-A modellek bekeretezik a rendellenes fogakat, és minden kerethez diagnóziscímkét és pontszámot adnak:
+For every abnormal tooth, the model draws a bounding box and assigns one of four diagnoses with a confidence score:
 
-| Osztály (DENTEX) | Magyarul |
+| Class | Meaning |
 | --- | --- |
-| `Impacted` | beékelődött fog |
-| `Caries` | szuvasodás |
-| `Periapical Lesion` | gyökércsúcs körüli elváltozás |
-| `Deep Caries` | mély szuvasodás |
+| `Impacted` | a tooth that has not fully erupted and stays in the jaw bone |
+| `Caries` | tooth decay |
+| `Periapical Lesion` | an inflammatory lesion around the root tip |
+| `Deep Caries` | advanced decay close to the pulp |
 
-## Adathalmaz
+Below, Faster R-CNN is run on a test image. Solid boxes are predictions, dashed boxes are the dentists' annotations, and ✗ marks a false positive:
 
-A [DENTEX](https://github.com/ibrahimethemhamamci/DENTEX) (MICCAI 2023 Challenge) `quadrant-enumeration-disease` részhalmazát használjuk: **705 annotált panorámaröntgen**, 3529 jelölés.
+![Faster R-CNN predictions compared with the ground truth](docs/screenshots/zoom.png)
 
-| | Tanító | Validációs | Teszt |
+## Dataset
+
+We use the `quadrant-enumeration-disease` subset of [DENTEX](https://github.com/ibrahimethemhamamci/DENTEX) (MICCAI 2023 Challenge): **705 annotated panoramic X-rays** with 3,529 labelled findings.
+
+| | Train | Validation | Test |
 | --- | ---: | ---: | ---: |
-| Képek | 493 | 106 | 106 |
+| Images | 493 | 106 | 106 |
 
-- Rögzített, véletlen, képszintű felosztás (`seed=42`).
-- Aránytartó átméretezés 1024×1024-re, szürke kitöltéssel (letterbox).
-- Mindkét modell ugyanazokat a képeket kapja. A címkék YOLO és COCO formátumban is elkészülnek.
-- A legjobb epochot a validációs halmaz alapján választjuk ki. A teszthalmazt csak a végső összehasonlításhoz használjuk.
+- Fixed random split at image level (`seed=42`).
+- Images are resized to 1024×1024 with preserved aspect ratio and grey padding (letterbox).
+- Both models see exactly the same images. Labels are written in both YOLO and COCO format.
+- The best epoch is chosen on the validation split. The test split is used only for the final comparison.
 
-## Modellek
+## Models
 
-| Modell | Típus | Paraméterek | Megvalósítás |
+| Model | Type | Parameters | Implementation |
 | --- | --- | ---: | --- |
-| YOLOv8s | egylépéses | 11,1 M | Ultralytics |
-| Faster R-CNN, ResNet-50 FPN | kétlépéses (RPN, utána osztályozás) | 41,4 M | Torchvision |
+| YOLOv8s | one-stage | 11.1 M | Ultralytics |
+| Faster R-CNN, ResNet-50 FPN | two-stage (region proposals, then classification) | 41.4 M | Torchvision |
 
-Mindkét modell COCO-n előtanított súlyokból indul, és a DENTEX-en van finomhangolva, 50 epochon át. Kiértékelésre mindkettő **ugyanazt a COCO-kiértékelőt** használja, így a számok közvetlenül összevethetők.
+Both models start from COCO-pretrained weights and are fine-tuned on DENTEX for 50 epochs. Both are scored with **the same COCO evaluator**, so the numbers are directly comparable.
 
 ```mermaid
 flowchart LR
-    A[DENTEX<br/>705 röntgen] --> B[prepare_data.py<br/>1024×1024, train/val/test]
+    A[DENTEX<br/>705 X-rays] --> B[prepare_data.py<br/>1024×1024, train/val/test]
     B --> C1[YOLOv8s]
     B --> C2[Faster R-CNN]
-    C1 & C2 --> D[evaluate.py<br/>közös COCO-kiértékelés]
+    C1 & C2 --> D[evaluate.py<br/>shared COCO evaluation]
     D --> E[compare.py]
     C1 & C2 --> F[webapp]
 ```
 
-## Eredmények
+## Results
 
-Teszthalmaz: 106 kép, 564 annotáció. A modellek NVIDIA RTX 3050 (6 GB, laptop) GPU-n tanultak.
+Test split: 106 images, 564 annotations. Both models were trained on an NVIDIA RTX 3050 laptop GPU (6 GB).
 
-| Mérőszám | YOLOv8s | Faster R-CNN |
+| Metric | YOLOv8s | Faster R-CNN |
 | --- | ---: | ---: |
-| mAP50–95 | 0,205 | **0,309** |
-| mAP50 | 0,314 | **0,487** |
-| Precision | 44,6% | **47,2%** |
-| Recall | 26,6% | **55,9%** |
-| F1 | 0,333 | **0,511** |
-| Késleltetés / kép | **42,0 ms** | 190,6 ms |
-| Tanítási idő | **40 perc** | 4 óra 50 perc |
+| mAP50–95 | 0.205 | **0.309** |
+| mAP50 | 0.314 | **0.487** |
+| Precision | 44.6% | **47.2%** |
+| Recall | 26.6% | **55.9%** |
+| F1 | 0.333 | **0.511** |
+| Latency per image | **42.0 ms** | 190.6 ms |
+| Training time | **40 min** | 4 h 50 min |
 
-Precision, recall és F1: 0,25-ös pontszámküszöb, IoU ≥ 0,5, osztályhelyes párosítás. A késleltetést batch=1 mellett, bemelegítés után, GPU-szinkronizálással mértük.
+Precision, recall and F1 are computed at a score threshold of 0.25, with IoU ≥ 0.5 and a matching class. Latency is measured with batch size 1, after warm-up, with GPU synchronisation.
 
-**mAP50–95 osztályonként**
+![mAP50–95 per class](docs/figures/class_ap.png)
 
-| Osztály | YOLOv8s | Faster R-CNN |
-| --- | ---: | ---: |
-| Impacted | 0,515 | **0,560** |
-| Caries | 0,199 | **0,235** |
-| Periapical Lesion | 0,035 | **0,168** |
-| Deep Caries | 0,070 | **0,274** |
+![Speed vs. accuracy](docs/figures/speed_accuracy.png)
 
-![Az Eredmények fül](docs/screenshots/results.png)
+![Validation mAP during training](docs/figures/validation_curves.png)
 
-**Összefoglalva:**
+**Takeaways**
 
-- A **Faster R-CNN** minden pontossági mérőszámban jobb, legnagyobb előnye a recallban van. A gyökércsúcs körüli elváltozást és a mély szuvasodást lényegesen jobban felismeri.
-- A **YOLOv8s** kb. **4,5-ször gyorsabb** a predikcióban, és körülbelül hétszer gyorsabban tanul, ezért interaktív használatra kényelmesebb.
-- Mindkét modellnek a beékelődött fog a legkönnyebb osztály, a gyökércsúcs körüli elváltozás pedig a legnehezebb, ami a kevés tanítópéldával is összefügg.
+- **Faster R-CNN is more accurate on every metric.** The biggest gap is in recall: it finds about twice as many of the annotated findings. It is also much better at the two hardest classes, periapical lesions and deep caries.
+- **YOLOv8s is about 4.5× faster at inference and trains about 7× faster,** which makes it the better choice for interactive use.
+- **Impacted teeth are the easiest class for both models,** and periapical lesions the hardest. This is partly because the training set has only 117 periapical lesion examples.
+- **YOLOv8s reaches its best validation score after only 8 epochs and then levels off.** Faster R-CNN keeps improving until about epoch 20.
 
-Részletes szakmai beszámoló: [docs/beszamolo.md](docs/beszamolo.md). A tanulási görbék és a példaképek a [reports/figures/](reports/figures/) mappában vannak.
+The figures can be regenerated from the saved logs with `python make_figures.py`. A detailed report of the experiment, written in Hungarian, is in [docs/beszamolo.md](docs/beszamolo.md).
 
-## Webes felület
+## Web interface
 
-Egy kis Flask-alkalmazás, egyetlen HTML-oldallal. Nincs build lépés, és internet sem kell hozzá.
+A small Flask app with a single HTML page. It needs no build step and no internet connection.
 
 ```bash
 python -m webapp.app            # http://127.0.0.1:5000
-python -m webapp.app --preload  # a modellek betöltése már indításkor
+python -m webapp.app --preload  # load the models at startup
 ```
 
-- Választhatsz egy tesztképet a 106 közül, vagy feltölthetsz saját panorámaröntgent.
-- A kiválasztott modellek egymás mellett elemzik ugyanazt a képet, a futási idővel együtt.
-- A valós annotáció szaggatott, a predikció folytonos vonallal látszik, a téves jelölést ✗ jelöli.
-- A TP / FP / FN értékek a konfidenciaküszöb csúszkájával élőben frissülnek.
-- A *Results* fül az `evaluate.py` által mentett teszteredményeket mutatja.
+- Pick one of the 106 test images or upload your own panoramic X-ray.
+- The selected models analyse the same image side by side, with the measured run time.
+- Ground truth is drawn dashed and predictions solid. False positives are marked with ✗.
+- TP / FP / FN counts update live as you move the confidence threshold.
+- Click an image to enlarge it.
+- The *Results* tab reads the test metrics saved by `evaluate.py`.
 
-A modellek és a súlyfájlok útvonala a `config.json` `models` részében van megadva.
+![Results tab](docs/screenshots/results.png)
 
-## Telepítés és használat
+The times shown in the web interface include image pre- and post-processing and vary with system load. The reference latency is the one in the results table above. The models and their weight files are listed under `models` in `config.json`.
 
-Minden parancsot a projekt gyökeréből kell futtatni. Python 3.10 vagy 3.11 ajánlott.
+## Installation and usage
 
-### 1. Környezet
+Run all commands from the project root. Python 3.10 or 3.11 is recommended.
+
+### 1. Environment
 
 ```bash
 python -m venv .venv
 # Windows: .\.venv\Scripts\activate    Linux/macOS: source .venv/bin/activate
 
-# A PyTorch verziót a géphez kell igazítani (https://pytorch.org/get-started/locally/), pl. CUDA 12.1:
+# Install the PyTorch build that matches your machine (https://pytorch.org/get-started/locally/), e.g. CUDA 12.1:
 pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
 
 pip install -r requirements.txt
 python -m unittest discover -s tests -v
 ```
 
-A `"device": "auto"` beállítás CUDA GPU-t használ, ha van, különben CPU-t.
+With `"device": "auto"` a CUDA GPU is used when available, otherwise the CPU.
 
-### 2. Adatok
+### 2. Data
 
-Töltsd le a [DENTEX `training_data.zip`](https://zenodo.org/records/7812323) archívumot, és csomagold ki a projekt gyökerébe:
+Download [DENTEX `training_data.zip`](https://zenodo.org/records/7812323) and extract it into the project root:
 
 ```text
 training_data/
@@ -155,75 +158,76 @@ training_data/
 python prepare_data.py   # -> data/prepared/
 ```
 
-### 3. Tanítás
+### 3. Training
 
-Az epochszám, a batchméret és a tanulási ráta a `config.json` fájlban állítható.
+Epochs, batch size and learning rate are set in `config.json`.
 
 ```bash
 python -m yolo.train          # -> runs/yolo
 python -m faster_rcnn.train   # -> runs/faster_rcnn
 ```
 
-A két tanítást egymás után futtasd. A szkriptek nem írják felül a létező futásokat. Más YOLO-súlyokkal is lehet tanítani, például: `python -m yolo.train --model yolov8m.pt --name yolov8m`.
+Run the two trainings one after the other. The scripts never overwrite an existing run. Other YOLO weights can be trained as well, e.g. `python -m yolo.train --model yolov8m.pt --name yolov8m`.
 
-### 4. Kiértékelés és összehasonlítás
+### 4. Evaluation and comparison
 
 ```bash
 python evaluate.py --method yolo        --weights runs/yolo/weights/best.pt --label YOLOv8s
 python evaluate.py --method faster_rcnn --weights runs/faster_rcnn/best.pth --label "Faster R-CNN"
-python compare.py   # -> runs/comparison/comparison.md és .csv
+python compare.py        # -> runs/comparison/comparison.md and .csv
+python make_figures.py   # -> docs/figures/
 ```
 
-A `compare.py` megtagadja az összehasonlítást, ha a futások más adatfelosztást, küszöböt vagy eszközt használtak.
+`compare.py` refuses to compare runs that used a different data split, threshold or device.
 
-### 5. Predikció egy képen
+### 5. Prediction on a single image
 
 ```bash
-python predict.py --method faster_rcnn --weights runs/faster_rcnn/best.pth --image rontgen.png --output runs/demo/eredmeny.png --threshold 0.3
+python predict.py --method faster_rcnn --weights runs/faster_rcnn/best.pth --image xray.png --output runs/demo/result.png --threshold 0.3
 ```
 
-A kimenet egy bekeretezett kép és egy JSON-fájl az eredeti koordinátákkal. Ha nincs találat, abból nem következik, hogy a fogazat egészséges.
+The output is the annotated image plus a JSON file with boxes in the original image coordinates. No detections does not mean the teeth are healthy.
 
-## Projektszerkezet
+## Project structure
 
 ```text
-common/            közös képfeldolgozás, inferencia és COCO-mérőszámok
-yolo/train.py      YOLO-tanítás (Ultralytics)
-faster_rcnn/       Faster R-CNN modell, adatbetöltő és tanítás (Torchvision)
-webapp/            Flask szerver és statikus HTML/CSS/JS felület
-tests/             adatfeldolgozási és kiértékelési tesztek szintetikus adattal
-prepare_data.py    DENTEX -> közös 1024×1024 adathalmaz
-evaluate.py        kiértékelés a teszthalmazon, késleltetésméréssel
-compare.py         összehasonlító CSV és Markdown
-predict.py         egy kép elemzése parancssorból
-build_report.py    beszámoló és ábrák generálása a mentett eredményekből
-config.json        útvonalak, tanítási és kiértékelési beállítások
-docs/              beszámoló és képernyőképek
-reports/           ábrák és elemzési táblák
+common/            shared image processing, inference and COCO metrics
+yolo/train.py      YOLO training (Ultralytics)
+faster_rcnn/       Faster R-CNN model, data loader and training (Torchvision)
+webapp/            Flask server and static HTML/CSS/JS front end
+tests/             data preparation and evaluation tests on synthetic data
+prepare_data.py    DENTEX -> shared 1024×1024 dataset
+evaluate.py        test-set evaluation with latency measurement
+compare.py         comparison table (CSV and Markdown)
+predict.py         analyse one image from the command line
+make_figures.py    README figures from the saved results
+build_report.py    full report generator (Hungarian)
+config.json        paths, training and evaluation settings, model list
+docs/              screenshots, figures and the report
 ```
 
-A betanított súlyok (`runs/`) és az adatok (`data/`, `training_data/`) méretük miatt nincsenek a repóban.
+Trained weights (`runs/`) and data (`data/`, `training_data/`) are not included because of their size.
 
-## Korlátok
+## Limitations
 
-- Egyetlen seed és felosztás, 106 tesztkép. A különbségek nagysága tájékoztató jellegű.
-- Képszintű felosztás. Az archívumban nincs betegazonosító, így a betegszintű elkülönítés nem garantált.
-- Kiegyensúlyozatlan osztályok: gyökércsúcs körüli elváltozásból a tanítóhalmazban csak 117 példa van.
-- Nincs augmentáció, és a két modell tanítási receptje (optimalizáló, batch, ütemezés) eltér.
-- A pontszámok nem kalibrált klinikai valószínűségek. A modell nem ad leletet és fogszámozást sem.
+- One seed and one split, with 106 test images. The size of the differences is indicative only.
+- The split is per image. The archive has no patient ids, so patient-level separation is not guaranteed.
+- The classes are imbalanced: only 117 periapical lesions in the training set.
+- No data augmentation, and the two training recipes (optimizer, batch size, schedule) differ.
+- Scores are not calibrated clinical probabilities. The model produces no written report and no tooth numbering.
 
-## Készítők
+## Authors
 
 - **[valentin-22-valentin](https://github.com/valentin-22-valentin)**
 - **[Toth Szilard](https://github.com/Totocsy)**
 
-## Hivatkozások és licencek
+## References and licenses
 
 1. Ren S., He K., Girshick R., Sun J. *Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks.* NeurIPS 2015. [link](https://papers.nips.cc/paper/2015/hash/14bfa6bb14875e45bba028a21ed38046-Abstract.html)
 2. Hamamci I. E. et al. *DENTEX: An Abnormal Tooth Detection with Dental Enumeration and Diagnosis Benchmark for Panoramic X-rays.* arXiv:2305.19112. [link](https://arxiv.org/abs/2305.19112)
-3. [Ultralytics YOLOv8 dokumentáció](https://docs.ultralytics.com/)
+3. [Ultralytics YOLOv8 documentation](https://docs.ultralytics.com/)
 4. [Torchvision Faster R-CNN](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.detection.fasterrcnn_resnet50_fpn.html)
 
-- **Kód:** [AGPL-3.0](LICENSE).
-- **Adatok:** a DENTEX és a belőle készült ábrák, a képernyőképeket is beleértve, [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) licencűek. Csak nem kereskedelmi célra használhatók, a szerzők feltüntetésével. A képeken csak átméretezés, kivágás, keretek és feliratok hozzáadása történt.
-- **Könyvtárak:** [Ultralytics](https://www.ultralytics.com/license) (AGPL-3.0), PyTorch / Torchvision (BSD), Flask (BSD).
+- **Code:** [AGPL-3.0](LICENSE).
+- **Data:** DENTEX and all images derived from it, including the screenshots, are licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/): non-commercial use only, with attribution. The images were only resized, cropped, and overlaid with boxes and labels.
+- **Libraries:** [Ultralytics](https://www.ultralytics.com/license) (AGPL-3.0), PyTorch / Torchvision (BSD), Flask (BSD).

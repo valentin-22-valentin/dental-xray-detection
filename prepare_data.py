@@ -16,7 +16,7 @@ def find_annotations(root, explicit):
         path = path if path.is_absolute() else root / path
         data = read_json(path)
         if "categories_3" not in data:
-            raise ValueError("A megadott JSON nem DENTEX diagnózisannotáció (categories_3 hiányzik).")
+            raise ValueError("The given JSON is not a DENTEX diagnosis annotation file (categories_3 missing).")
         return path, data
     matches = []
     for path in sorted(root.rglob("*.json")):
@@ -27,31 +27,31 @@ def find_annotations(root, explicit):
         except (ValueError, OSError):
             continue
     if len(matches) != 1:
-        raise ValueError(f"Pontosan egy diagnózis-JSON szükséges; találatok: {[str(p) for p, _ in matches]}. Állítsd be az annotations mezőt.")
+        raise ValueError(f"Expected exactly one diagnosis JSON, found: {[str(p) for p, _ in matches]}. Set the annotations field in config.json.")
     return matches[0]
 
 
 def prepare(cfg):
     root = Path(cfg["dataset_root"]).expanduser().resolve()
     if not root.is_dir():
-        raise FileNotFoundError(f"Nem található az adathalmaz: {root}. Töltsd le és csomagold ki, majd módosítsd a config.json dataset_root mezőjét.")
+        raise FileNotFoundError(f"Dataset not found: {root}. Download and extract it, then set dataset_root in config.json.")
     output = Path(cfg["prepared_dir"])
     if output.exists():
-        raise FileExistsError(f"A cél már létezik: {output}. Új előkészítéshez válassz új prepared_dir mappát.")
+        raise FileExistsError(f"Output already exists: {output}. Choose a new prepared_dir to prepare the data again.")
     source, raw = find_annotations(root, cfg.get("annotations"))
     cats = sorted(raw["categories_3"], key=lambda c: c["id"])
     mapping = {c["id"]: i for i, c in enumerate(cats)}
     if len(mapping) != 4:
-        raise ValueError("Négy DENTEX diagnózisosztályt várunk.")
+        raise ValueError("Expected four DENTEX diagnosis classes.")
     categories = [{"id": i, "name": c["name"]} for i, c in enumerate(cats)]
     size = int(cfg["image_size"])
     vf, tf = float(cfg["val_fraction"]), float(cfg["test_fraction"])
     if size < 64 or size % 32 or not (0 < vf < 1 and 0 < tf < 1 and vf + tf < 1):
-        raise ValueError("image_size >=64 és 32 többszöröse; val/test arány >0, összegük <1.")
+        raise ValueError("image_size must be >= 64 and a multiple of 32; val/test fractions must be > 0 with a sum < 1.")
     images = sorted(raw["images"], key=lambda x: x["id"])
     by_id = {im["id"]: im for im in images}
     if len(images) != len(by_id) or len(images) < 3:
-        raise ValueError("Legalább három kép és egyedi képazonosítók szükségesek.")
+        raise ValueError("At least three images with unique ids are required.")
     files = defaultdict(list)
     for p in root.rglob("*"):
         if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}:
@@ -64,32 +64,32 @@ def prepare(cfg):
         if not candidates:
             candidates = files[Path(name).name]
         if len(candidates) != 1:
-            raise ValueError(f"Hiányzó vagy többértelmű kép: {name}, találatok: {candidates}")
+            raise ValueError(f"Missing or ambiguous image: {name}, candidates: {candidates}")
         path = candidates[0]
         with Image.open(path) as pic:
             if pic.size != (im["width"], im["height"]):
-                raise ValueError(f"Képméret eltér az annotációtól: {path}")
+                raise ValueError(f"Image size differs from the annotation: {path}")
             digest = hashlib.sha256(pic.convert("RGB").tobytes()).hexdigest()
         if digest in hashes:
-            raise ValueError(f"Duplikált kép: {name} és {hashes[digest]}; felosztás előtt távolítsd el.")
+            raise ValueError(f"Duplicate image: {name} and {hashes[digest]}; remove one before splitting.")
         hashes[digest] = name
         resolved[im["id"]] = path
     annotations = defaultdict(list)
     for a in raw["annotations"]:
         if a.get("image_id") not in by_id or a.get("category_id_3") not in mapping:
-            raise ValueError(f"Érvénytelen kép/osztály hivatkozás: {a.get('id')}")
+            raise ValueError(f"Invalid image/category reference: {a.get('id')}")
         if a.get("iscrowd", 0):
-            raise ValueError("Crowd annotáció nem támogatott a közös YOLO formátumban.")
+            raise ValueError("Crowd annotations are not supported in the shared YOLO format.")
         im = by_id[a["image_id"]]
         x, y, w, h = a["bbox"]
         if not all(math.isfinite(v) for v in (x, y, w, h)) or w <= 0 or h <= 0 or x < 0 or y < 0 or x+w > im["width"]+1 or y+h > im["height"]+1:
-            raise ValueError(f"Érvénytelen bbox: {a.get('id')}, {a['bbox']}")
+            raise ValueError(f"Invalid bbox: {a.get('id')}, {a['bbox']}")
         annotations[a["image_id"]].append(a)
     # Fixed random image split. Patient identifiers are not supplied by the archive.
     random.Random(cfg["seed"]).shuffle(images)
     nv, nt = max(1, round(len(images)*vf)), max(1, round(len(images)*tf))
     if nv + nt >= len(images):
-        raise ValueError("Túl kevés kép a felosztási arányokhoz.")
+        raise ValueError("Too few images for the requested split fractions.")
     splits = {"val": images[:nv], "test": images[nv:nv+nt], "train": images[nv+nt:]}
     manifest = {"source_annotations": str(source), "source_sha256": fingerprint(source), "seed": cfg["seed"], "image_size": size, "categories": categories, "splits": {}, "counts": {}}
     for split, subset in splits.items():
@@ -120,10 +120,10 @@ def prepare(cfg):
         manifest["counts"][split] = {c["name"]: counts[c["id"]] for c in categories}
         missing = [c["name"] for c in categories if counts[c["id"]] == 0]
         if missing:
-            print(f"FIGYELEM: {split} halmazból hiányzó osztályok: {missing}. Több adat vagy más seed szükséges.")
+            print(f"WARNING: classes missing from the {split} split: {missing}. More data or another seed is needed.")
     write_json(output / "manifest.json", manifest)
     write_dataset_yaml(output, categories)
-    print(f"Kész: {output}; képek: { {k: len(v) for k,v in splits.items()} }")
+    print(f"Done: {output}; images: { {k: len(v) for k,v in splits.items()} }")
     print(manifest["counts"])
 
 

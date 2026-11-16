@@ -16,7 +16,7 @@ class Detector:
             self.model = YOLO(str(weights))
             expected = [c["name"] for c in self.metadata["categories"]]
             if [self.model.names[i] for i in range(len(expected))] != expected:
-                raise ValueError("A YOLO súlyok osztályai eltérnek a metaadatoktól.")
+                raise ValueError("The classes in the YOLO weights do not match the run metadata.")
         else:
             from faster_rcnn.model import build_model
             # Load only your own locally produced checkpoints.
@@ -29,7 +29,7 @@ class Detector:
 
     def check_dataset(self, prepared):
         if fingerprint(Path(prepared) / "manifest.json") != self.metadata["manifest_sha256"]:
-            raise ValueError("A modell más adatfelosztással készült; a teszt összehasonlítás nem érvényes.")
+            raise ValueError("The model was trained on a different data split; the test comparison would not be valid.")
 
     @torch.inference_mode()
     def predict_square(self, image):

@@ -52,6 +52,6 @@ if __name__ == "__main__":
     parser.add_argument("--config", default="config.json")
     parser.add_argument("--split", choices=["val","test"], default="test")
     parser.add_argument("--output")
-    parser.add_argument("--label", help="Megjelenített név az összehasonlításban (alapértelmezés: a futás mappájának neve)")
+    parser.add_argument("--label", help="name shown in the comparison (default: name of the run folder)")
     a = parser.parse_args()
     evaluate(a.method, a.weights, load_config(a.config), a.split, a.output, a.label)

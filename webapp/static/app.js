@@ -268,8 +268,15 @@ function renderCards() {
 
 function openLightbox(result, model) {
   $("#lightbox-title").textContent = `${model?.name ?? result.model} · ${result.latency_ms.toFixed(1)} ms`;
-  $("#lightbox-body").replaceChildren(buildSvg(result, state.response, true).svg);
+  const { svg } = buildSvg(result, state.response, true);
+  const body = $("#lightbox-body");
+  body.replaceChildren(svg);
   $("#lightbox").hidden = false;
+  // Size the SVG to the image aspect ratio so no padding around the crop is shown.
+  const [, , vw, vh] = state.response.view;
+  const scale = Math.min(body.clientWidth / vw, body.clientHeight / vh);
+  svg.setAttribute("width", Math.floor(vw * scale));
+  svg.setAttribute("height", Math.floor(vh * scale));
 }
 
 // ---------------------------------------------------------------- results tab
@@ -361,6 +368,8 @@ async function applyUrlParams() {
   }
   if (state.info.samples.includes(params.get("sample"))) selectSample(params.get("sample"));
   if (params.get("run") === "1") await run();
+  const zoom = state.response?.results.find((r) => r.model === params.get("zoom"));
+  if (zoom) openLightbox(zoom, state.info.models.find((m) => m.id === zoom.model));
 }
 
 init()

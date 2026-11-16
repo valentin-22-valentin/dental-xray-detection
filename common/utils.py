@@ -26,13 +26,13 @@ def load_config(path="config.json"):
     cfg["dataset_root"] = str(project_path(cfg["dataset_root"]).resolve())
     cfg["prepared_dir"] = str(project_path(cfg["prepared_dir"]).resolve())
     if int(cfg["epochs"]) < 1 or int(cfg["workers"]) < 0:
-        raise ValueError("epochs >= 1 és workers >= 0 szükséges.")
+        raise ValueError("epochs >= 1 and workers >= 0 are required.")
     for method in ("yolo", "faster_rcnn"):
         if cfg[method]["batch_size"] < 1 or cfg[method]["lr"] <= 0:
-            raise ValueError(f"Érvénytelen batch_size/lr: {method}")
+            raise ValueError(f"Invalid batch_size/lr: {method}")
     ev = cfg["evaluation"]
     if not 0 < ev["score_floor"] <= ev["display_threshold"] <= 1 or ev["max_detections"] < 10:
-        raise ValueError("0 < score_floor <= display_threshold <= 1; max_detections >= 10 szükséges.")
+        raise ValueError("Required: 0 < score_floor <= display_threshold <= 1 and max_detections >= 10.")
     return cfg
 
 

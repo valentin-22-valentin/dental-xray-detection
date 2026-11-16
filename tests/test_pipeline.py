@@ -75,7 +75,7 @@ class PipelineTests(unittest.TestCase):
     def test_duplicate_rejected(self):
         source = Path(self.cfg["dataset_root"])
         (source / "1.png").write_bytes((source / "0.png").read_bytes())
-        with self.assertRaisesRegex(ValueError,"Duplikált"):
+        with self.assertRaisesRegex(ValueError,"Duplicate"):
             prepare(self.cfg)
 
     def test_invalid_box_rejected(self):

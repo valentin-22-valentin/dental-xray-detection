@@ -46,9 +46,9 @@ def compute_metrics(gt_path, predictions, threshold=0.25, max_detections=100):
     category_ids = {x["id"] for x in gt["categories"]}
     for p in predictions:
         if p["image_id"] not in image_ids or p["category_id"] not in category_ids:
-            raise ValueError("A predikció ismeretlen kép-/osztályazonosítót tartalmaz.")
+            raise ValueError("Prediction refers to an unknown image or category id.")
         if not all(math.isfinite(x) for x in [*p["bbox"], p["score"]]) or len(p["bbox"]) != 4 or min(p["bbox"][2:]) <= 0 or not 0 <= p["score"] <= 1:
-            raise ValueError("Érvénytelen predikció.")
+            raise ValueError("Invalid prediction.")
     with contextlib.redirect_stdout(io.StringIO()):
         coco = COCO(str(gt_path))
         if predictions:

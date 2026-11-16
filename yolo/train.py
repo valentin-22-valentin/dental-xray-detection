@@ -11,10 +11,10 @@ def train(cfg, model_name=None, run_name="yolo"):
     root = Path(cfg["prepared_dir"])
     manifest = read_json(root / "manifest.json")
     if manifest["image_size"] != cfg["image_size"]:
-        raise ValueError("Az image_size eltér az előkészített adatokétól.")
+        raise ValueError("image_size differs from the prepared data.")
     run = ROOT / "runs" / run_name
     if run.exists():
-        raise FileExistsError(f"A futás már létezik: {run}. Archiváld/nevezd át új tanítás előtt.")
+        raise FileExistsError(f"Run already exists: {run}. Rename or archive it before training again.")
     write_dataset_yaml(root, manifest["categories"])
     start = time.perf_counter()
     model_name = model_name or cfg["yolo"]["model"]
@@ -30,7 +30,7 @@ def train(cfg, model_name=None, run_name="yolo"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="config.json")
-    parser.add_argument("--model", help="Előtanított súlyok, pl. yolov8s.pt vagy yolo26s.pt (alapértelmezés: config.json)")
-    parser.add_argument("--name", default="yolo", help="Futás neve a runs/ mappában, pl. yolo26s")
+    parser.add_argument("--model", help="pretrained weights, e.g. yolov8s.pt or yolov8m.pt (default: config.json)")
+    parser.add_argument("--name", default="yolo", help="run name inside runs/, e.g. yolov8m")
     args = parser.parse_args()
     train(load_config(args.config), args.model, args.name)
